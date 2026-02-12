@@ -264,22 +264,19 @@ function showTypingIndicator() {
 }
 
 // Добавление сообщения бота (с задержками)
-// existingLoadingId — если передан, переиспользует уже показанный индикатор для первого элемента
-async function addBotMessage(text, existingLoadingId) {
+// existingLoader — если передан, переиспользует уже показанный индикатор для первого элемента
+async function addBotMessage(text, existingLoader) {
     const processedText = processBotMessage(text);
-    let pendingLoadingId = existingLoadingId || null;
     
     // Собираем все элементы для последовательного вывода
     const queue = [];
     
     if (processedText.hasMarkers) {
-        // Текстовые части
         for (const part of processedText.textParts) {
             if (part.trim()) {
                 queue.push({ type: 'text', content: part, delay: DELAY.TEXT(part) });
             }
         }
-        // Метки (кроме MESSAGE_DIVIDER)
         for (const marker of processedText.markers) {
             const markerType = typeof marker === 'string' ? marker : marker.type;
             if (markerType === 'MESSAGE_DIVIDER') continue;
@@ -301,21 +298,15 @@ async function addBotMessage(text, existingLoadingId) {
         queue.push({ type: 'text', content: content, delay: DELAY.TEXT(content) });
     }
     
-    // Последовательно выводим элементы
+    // Для первого элемента: переиспользуем существующий индикатор или создаём новый
+    let loader = existingLoader || addLoadingMessage();
+    
     for (let i = 0; i < queue.length; i++) {
         const item = queue[i];
         
-        // Для первого элемента: если есть переданный индикатор — ждём и удаляем его
-        // Для остальных — создаём новый индикатор
-        if (pendingLoadingId) {
-            await sleep(item.delay);
-            removeLoadingMessage(pendingLoadingId);
-            pendingLoadingId = null;
-        } else {
-            const typingId = showTypingIndicator();
-            await sleep(item.delay);
-            removeLoadingMessage(typingId);
-        }
+        // Ждём задержку, затем убираем индикатор
+        await sleep(item.delay);
+        removeLoadingMessage(loader);
         
         // Выводим элемент
         if (item.type === 'text') {
@@ -328,9 +319,9 @@ async function addBotMessage(text, existingLoadingId) {
         adjustChatWindowHeight();
         scrollToBottom();
         
-        // Если не последний элемент — сразу показываем индикатор для следующего
+        // Если не последний — сразу показываем новый индикатор
         if (i < queue.length - 1) {
-            pendingLoadingId = showTypingIndicator();
+            loader = addLoadingMessage();
         }
     }
 }
