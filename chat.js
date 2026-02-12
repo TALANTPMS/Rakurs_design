@@ -284,7 +284,8 @@ function processBotMessage(text) {
         { pattern: /\[ASK_MESSENGER\]/g, type: 'ASK_MESSENGER' },
         { pattern: /\[NAME_INPUT\]/g, type: 'NAME_INPUT' },
         { pattern: /\[PHONE_INPUT\]/g, type: 'PHONE_INPUT' },
-        { pattern: /\[REQUEST_ACCEPTED\]/g, type: 'REQUEST_ACCEPTED' }
+        { pattern: /\[REQUEST_ACCEPTED\]/g, type: 'REQUEST_ACCEPTED' },
+        { pattern: /\[SHOW_GALLERY\]/g, type: 'SHOW_GALLERY' }
     ];
     
     // Удаляем метки из текста и сохраняем их
@@ -338,6 +339,9 @@ function handleMarker(marker) {
             break;
         case 'REQUEST_ACCEPTED':
             showRequestAccepted();
+            break;
+        case 'SHOW_GALLERY':
+            showGallery();
             break;
     }
 }
@@ -554,6 +558,62 @@ function showRequestAccepted() {
     chatMessages.appendChild(acceptedDiv);
     adjustChatWindowHeight();
     scrollToBottom();
+}
+
+// Показать галерею примеров работ
+let gallerySwiperCount = 0;
+
+function showGallery() {
+    gallerySwiperCount++;
+    const uniqueClass = `gallery-swiper-${gallerySwiperCount}`;
+
+    const galleryContainer = document.createElement('div');
+    galleryContainer.className = 'gallery-container';
+
+    const images = ['images/ex1.png', 'images/ex2.png', 'images/ex3.png'];
+
+    galleryContainer.innerHTML = `
+        <div class="swiper ${uniqueClass} gallery-swiper">
+            <div class="swiper-wrapper">
+                ${images.map((src, i) => `
+                    <div class="swiper-slide">
+                        <img src="${src}" alt="Пример работы ${i + 1}">
+                    </div>
+                `).join('')}
+            </div>
+            <div class="swiper-button-prev"></div>
+            <div class="swiper-button-next"></div>
+        </div>
+    `;
+
+    chatMessages.appendChild(galleryContainer);
+    adjustChatWindowHeight();
+    scrollToBottom();
+
+    // Инициализируем Swiper после вставки в DOM
+    setTimeout(() => {
+        new Swiper(`.${uniqueClass}`, {
+            slidesPerView: 1,
+            spaceBetween: 10,
+            loop: true,
+            navigation: {
+                nextEl: `.${uniqueClass} .swiper-button-next`,
+                prevEl: `.${uniqueClass} .swiper-button-prev`,
+            },
+            breakpoints: {
+                768: {
+                    slidesPerView: 2,
+                    spaceBetween: 12,
+                },
+                1024: {
+                    slidesPerView: 3,
+                    spaceBetween: 15,
+                }
+            }
+        });
+        adjustChatWindowHeight();
+        scrollToBottom();
+    }, 50);
 }
 
 // Создание элемента сообщения

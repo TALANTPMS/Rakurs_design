@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Чат Лендинг</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -74,12 +75,46 @@
     <footer class="footer">
         <div class="wrapper">
             <div class="footer-content">
-                <div class="footer-column">Ссылки</div>
-                <div class="footer-column">Инфо о компании</div>
-                <div class="footer-column">Контакты для связи</div>
+                <!-- Колонка 1: Логотип + ссылки -->
+                <div class="footer-column footer-col-links">
+                    <div class="footer-logo">
+                        <img src="images/logo-secondary.svg" alt="LP-CHAT.RU" class="footer-logo-img">
+                        <span class="footer-logo-text">Разработаем чат-лендинг <br> для вашего бизнеса</span>
+                    </div>
+                    <div class="footer-links">
+                        <a href="#" class="footer-link">Политика конфиденциальности</a>
+                        <a href="#" class="footer-link">Согласие на обработку персональных данных</a>
+                        <a href="#" class="footer-link">Пользовательское соглашение</a>
+                    </div>
+                </div>
+
+                <!-- Колонка 2: Инфо о компании -->
+                <div class="footer-column footer-col-info">
+                    <p class="footer-company-detail">ООО «Название компании»</p>
+                    <p class="footer-company-detail">ИНН 0000000000</p>
+                    <p class="footer-company-detail">ОГРН 0000000000000</p>
+                    <p class="footer-company-detail">КПП 000000000</p>
+                </div>
+
+                <!-- Колонка 3: Контакты -->
+                <div class="footer-column footer-col-contacts">
+                    <div class="footer-contact-block">
+                        <span class="footer-contact-label">Телефон:</span>
+                        <a href="tel:+70000000000" class="footer-contact-value">+7 (000) 000-00-00</a>
+                    </div>
+                    <div class="footer-contact-block">
+                        <span class="footer-contact-label">WhatsApp / Telegram:</span>
+                        <a href="#" class="footer-contact-value">+7 (000) 000-00-00</a>
+                    </div>
+                    <div class="footer-contact-block">
+                        <span class="footer-contact-label">Email:</span>
+                        <a href="mailto:info@example.com" class="footer-contact-value">info@example.com</a>
+                    </div>
+                </div>
             </div>
         </div>
     </footer>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="chat.js"></script>
 </body>
 </html>
