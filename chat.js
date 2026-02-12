@@ -71,19 +71,15 @@ async function initializeDialog() {
         // Отправляем запрос к API
         const botResponse = await sendMessageToAPI(messageHistory);
         
-        // Удаляем индикатор загрузки
-        removeLoadingMessage(loadingId);
-        
-        // Добавляем ответ бота в чат (с обработкой меток)
-        await addBotMessage(botResponse);
+        // Добавляем ответ бота в чат (передаём loadingId чтобы не мигал)
+        await addBotMessage(botResponse, loadingId);
         
         // Добавляем ответ в историю
         messageHistory.push({ role: 'assistant', content: botResponse });
         
     } catch (error) {
         console.error('Ошибка при инициализации диалога:', error);
-        removeLoadingMessage(loadingId);
-        await addBotMessage('Здравствуйте! Я Диана, ваш AI-консультант. Чем могу помочь?');
+        await addBotMessage('Здравствуйте! Я Диана, ваш AI-консультант. Чем могу помочь?', loadingId);
     } finally {
         sendBtn.disabled = false;
         chatInput.disabled = false;
@@ -151,11 +147,8 @@ async function handleSubmit(e) {
         // Отправляем запрос к API
         const botResponse = await sendMessageToAPI(messageHistory);
         
-        // Удаляем индикатор загрузки
-        removeLoadingMessage(loadingId);
-        
-        // Добавляем ответ бота в чат (с обработкой меток)
-        await addBotMessage(botResponse);
+        // Добавляем ответ бота в чат (передаём loadingId чтобы не мигал)
+        await addBotMessage(botResponse, loadingId);
         
         // Добавляем ответ в историю
         messageHistory.push({ role: 'assistant', content: botResponse });
@@ -165,8 +158,7 @@ async function handleSubmit(e) {
         
     } catch (error) {
         console.error('Ошибка при отправке сообщения:', error);
-        removeLoadingMessage(loadingId);
-        await addBotMessage('Извините, произошла ошибка. Попробуйте еще раз.');
+        await addBotMessage('Извините, произошла ошибка. Попробуйте еще раз.', loadingId);
     } finally {
         // Разблокируем кнопку отправки
         sendBtn.disabled = false;
@@ -216,10 +208,9 @@ async function sendAndProcessBotResponse() {
     
     try {
         const botResponse = await sendMessageToAPI(messageHistory);
-        removeLoadingMessage(loadingId);
         
-        // Добавляем ответ бота в чат (с обработкой меток)
-        await addBotMessage(botResponse);
+        // Добавляем ответ бота в чат (передаём loadingId чтобы не мигал)
+        await addBotMessage(botResponse, loadingId);
         
         // Добавляем ответ в историю
         messageHistory.push({ role: 'assistant', content: botResponse });
@@ -228,8 +219,7 @@ async function sendAndProcessBotResponse() {
         limitMessageHistory();
     } catch (error) {
         console.error('Ошибка при отправке сообщения:', error);
-        removeLoadingMessage(loadingId);
-        await addBotMessage('Извините, произошла ошибка. Попробуйте еще раз.');
+        await addBotMessage('Извините, произошла ошибка. Попробуйте еще раз.', loadingId);
     } finally {
         sendBtn.disabled = false;
         chatInput.disabled = false;
@@ -268,37 +258,31 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Показать/скрыть индикатор печатания между сообщениями
+// Показать индикатор печатания
 function showTypingIndicator() {
-    const id = addLoadingMessage();
-    scrollToBottom();
-    return id;
+    return addLoadingMessage();
 }
 
 // Добавление сообщения бота (с задержками)
-async function addBotMessage(text) {
+// existingLoadingId — если передан, переиспользует уже показанный индикатор для первого элемента
+async function addBotMessage(text, existingLoadingId) {
     const processedText = processBotMessage(text);
+    let pendingLoadingId = existingLoadingId || null;
+    
+    // Собираем все элементы для последовательного вывода
+    const queue = [];
     
     if (processedText.hasMarkers) {
-        // Выводим текстовые части с задержками
-        for (let i = 0; i < processedText.textParts.length; i++) {
-            const part = processedText.textParts[i];
-            if (!part.trim()) continue;
-            
-            const typingId = showTypingIndicator();
-            await sleep(DELAY.TEXT(part));
-            removeLoadingMessage(typingId);
-            
-            const messageDiv = createMessageElement('bot', part);
-            chatMessages.appendChild(messageDiv);
-            adjustChatWindowHeight();
-            scrollToBottom();
+        // Текстовые части
+        for (const part of processedText.textParts) {
+            if (part.trim()) {
+                queue.push({ type: 'text', content: part, delay: DELAY.TEXT(part) });
+            }
         }
-        
-        // Выводим метки с задержками
+        // Метки (кроме MESSAGE_DIVIDER)
         for (const marker of processedText.markers) {
             const markerType = typeof marker === 'string' ? marker : marker.type;
-            if (markerType === 'MESSAGE_DIVIDER') continue; // уже обработано при разбиении текста
+            if (markerType === 'MESSAGE_DIVIDER') continue;
             
             let delay = 400;
             switch (markerType) {
@@ -310,26 +294,44 @@ async function addBotMessage(text) {
                 case 'REQUEST_ACCEPTED': delay = DELAY.ACCEPTED; break;
                 case 'SHOW_GALLERY': delay = DELAY.GALLERY; break;
             }
-            
-            const typingId = showTypingIndicator();
-            await sleep(delay);
-            removeLoadingMessage(typingId);
-            
-            handleMarker(marker);
-            adjustChatWindowHeight();
-            scrollToBottom();
+            queue.push({ type: 'marker', marker: marker, delay: delay });
         }
     } else {
-        // Простое сообщение без меток
         const content = processedText.textParts[0] || text;
-        const typingId = showTypingIndicator();
-        await sleep(DELAY.TEXT(content));
-        removeLoadingMessage(typingId);
+        queue.push({ type: 'text', content: content, delay: DELAY.TEXT(content) });
+    }
+    
+    // Последовательно выводим элементы
+    for (let i = 0; i < queue.length; i++) {
+        const item = queue[i];
         
-        const messageDiv = createMessageElement('bot', content);
-        chatMessages.appendChild(messageDiv);
+        // Для первого элемента: если есть переданный индикатор — ждём и удаляем его
+        // Для остальных — создаём новый индикатор
+        if (pendingLoadingId) {
+            await sleep(item.delay);
+            removeLoadingMessage(pendingLoadingId);
+            pendingLoadingId = null;
+        } else {
+            const typingId = showTypingIndicator();
+            await sleep(item.delay);
+            removeLoadingMessage(typingId);
+        }
+        
+        // Выводим элемент
+        if (item.type === 'text') {
+            const messageDiv = createMessageElement('bot', item.content);
+            chatMessages.appendChild(messageDiv);
+        } else {
+            handleMarker(item.marker);
+        }
+        
         adjustChatWindowHeight();
         scrollToBottom();
+        
+        // Если не последний элемент — сразу показываем индикатор для следующего
+        if (i < queue.length - 1) {
+            pendingLoadingId = showTypingIndicator();
+        }
     }
 }
 
@@ -711,11 +713,10 @@ function createMessageElement(type, text) {
     return messageDiv;
 }
 
-// Добавление индикатора загрузки
+// Добавление индикатора загрузки (возвращает сам элемент)
 function addLoadingMessage() {
     const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'message message-bot';
-    loadingDiv.id = 'loading-message';
+    loadingDiv.className = 'message message-bot loading-indicator';
     
     const loadingContent = document.createElement('div');
     loadingContent.className = 'loading';
@@ -731,14 +732,13 @@ function addLoadingMessage() {
     adjustChatWindowHeight();
     scrollToBottom();
     
-    return 'loading-message';
+    return loadingDiv;
 }
 
 // Удаление индикатора загрузки
-function removeLoadingMessage(id) {
-    const loadingElement = document.getElementById(id);
-    if (loadingElement) {
-        loadingElement.remove();
+function removeLoadingMessage(el) {
+    if (el && el.parentNode) {
+        el.remove();
     }
 }
 
