@@ -786,6 +786,20 @@ function processBotMessage(text) {
             currentText = currentText.replace(pattern, '');
         }
     });
+
+    // Если в ответе есть интерактивные метки ввода/выбора (например, [ASK_MESSENGER]),
+    // то кнопки [BUTTON:] в этом же ответе считаем шумом и не показываем,
+    // иначе получается "двойной" выбор.
+    const hasInputLikeMarker = markers.some(m => {
+        const t = (typeof m === 'string' ? m : m.type);
+        return t === 'ASK_MESSENGER' || t === 'PHONE_INPUT' || t === 'NAME_INPUT';
+    });
+    if (hasInputLikeMarker) {
+        for (let i = markers.length - 1; i >= 0; i--) {
+            const t = (typeof markers[i] === 'string' ? markers[i] : markers[i].type);
+            if (t === 'BUTTON') markers.splice(i, 1);
+        }
+    }
     
     // Разделяем текст по меткам MESSAGE_DIVIDER (если они были)
     const hasMessageDivider = markers.some(m => (typeof m === 'string' ? m : m.type) === 'MESSAGE_DIVIDER');
