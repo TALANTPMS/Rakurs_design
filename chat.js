@@ -857,11 +857,11 @@ function showStartQuestions() {
     questionsContainer.className = 'start-questions-container';
     
     const questions = [
-        'Хочу записаться на бесплатный выезд и замер',
-        'Сколько стоит проект и от чего зависит цена?',
-        'Как долго длится разработка проекта и сам ремонт?',
-        'Вы оказываете помощь в ремонте и закупке материалов?',
-        'Можете показать примеры работ?',
+        'Хочу узнать стоимость строительства дома',
+        'Можно ли построить только коробку (каркас)?',
+        'Как выглядит максимальная прозрачность?',
+        'Какие гарантии даете на услуги?',
+        'Можете показать примеры ваших объектов?',
         'Хочу задать свой вопрос'
     ];
     
@@ -1014,6 +1014,10 @@ async function continueAfterNameInput() {
 function showPhoneInputForm() {
     const formContainer = document.createElement('div');
     formContainer.className = 'input-form-container';
+    formContainer.classList.add('phone-capture-form');
+
+    const phoneRow = document.createElement('div');
+    phoneRow.className = 'phone-capture-form__row';
     
     const input = document.createElement('input');
     input.type = 'tel';
@@ -1034,9 +1038,54 @@ function showPhoneInputForm() {
     submitBtn.type = 'button';
     submitBtn.className = 'form-submit-btn';
     submitBtn.textContent = 'Отправить';
+
+    const agreeLabel = document.createElement('label');
+    agreeLabel.className = 'chat-consent';
+
+    const agreeCheckbox = document.createElement('input');
+    agreeCheckbox.className = 'chat-consent__checkbox';
+    agreeCheckbox.type = 'checkbox';
+    agreeCheckbox.name = 'agree';
+
+    const agreeUi = document.createElement('span');
+    agreeUi.className = 'chat-consent__checkbox-ui';
+    agreeUi.setAttribute('aria-hidden', 'true');
+
+    const agreeText = document.createElement('span');
+    agreeText.className = 'chat-consent__text';
+    agreeText.innerHTML = `
+        Я даю <a href="#" data-remodal-target="personal-data">Согласие на обработку моих персональных данных</a>
+        и принимаю <a href="#" data-remodal-target="privacy">Политику конфиденциальности</a>
+    `;
+
+    agreeLabel.appendChild(agreeCheckbox);
+    agreeLabel.appendChild(agreeUi);
+    agreeLabel.appendChild(agreeText);
+
+    const errorNode = document.createElement('p');
+    errorNode.className = 'chat-consent__error';
+    errorNode.setAttribute('role', 'alert');
+    errorNode.setAttribute('aria-live', 'polite');
+
+    const setError = (message) => {
+        errorNode.textContent = message || '';
+    };
+
+    agreeCheckbox.addEventListener('change', () => {
+        if (agreeCheckbox.checked) {
+            setError('');
+        }
+    });
     
     submitBtn.addEventListener('click', () => {
         const phone = input.value.trim();
+        const agreed = agreeCheckbox.checked;
+
+        if (!agreed) {
+            setError('Необходимо согласиться с условиями обработки персональных данных.');
+            return;
+        }
+        setError('');
         
         if (phone) {
             addUserMessage(`Телефон: ${phone}`);
@@ -1048,8 +1097,12 @@ function showPhoneInputForm() {
         }
     });
     
-    formContainer.appendChild(input);
-    formContainer.appendChild(submitBtn);
+    phoneRow.appendChild(input);
+    phoneRow.appendChild(submitBtn);
+
+    formContainer.appendChild(phoneRow);
+    formContainer.appendChild(agreeLabel);
+    formContainer.appendChild(errorNode);
     chatMessages.appendChild(formContainer);
     adjustChatWindowHeight();
     scrollToBottom();
